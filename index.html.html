@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masjid Al-Ikhlas Digital</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: {
+      cream: '#FAF8F5', ink: '#1E293B',
+      zamrud: { DEFAULT: '#1B5E20', soft: '#E8F3E9', dark: '#124216' }
+    } } }
+  };
+</script>
+<style>
+  :root { --root-fs: 18px; }
+  html { font-size: var(--root-fs); scroll-behavior: smooth; }
+  body { background:#FAF8F5; color:#1E293B; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; line-height:1.6; }
+  /* Fokus sangat jelas untuk navigasi keyboard & lansia */
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+    outline: 4px solid #F59E0B; outline-offset: 2px;
+  }
+  .card { background:#fff; border:2px solid #E7E2D9; border-radius:1.25rem; padding:1.25rem; box-shadow:0 2px 6px rgba(30,41,59,.06); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-height:3rem; padding:.6rem 1.1rem;
+         border-radius:.9rem; font-weight:700; border:2px solid #1B5E20; cursor:pointer; transition:transform .1s, background .15s; text-align:center; }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background:#1B5E20; color:#fff; }
+  .btn-primary:hover { background:#124216; }
+  .btn-outline { background:#fff; color:#1B5E20; }
+  .btn-outline:hover { background:#E8F3E9; }
+  .chip { min-height:3.5rem; border:2px solid #1B5E20; border-radius:.9rem; background:#fff; color:#1B5E20; font-weight:800; cursor:pointer; }
+  .chip[aria-pressed="true"] { background:#1B5E20; color:#fff; }
+  .field { width:100%; min-height:3rem; padding:.55rem .9rem; border:2px solid #94A3B8; border-radius:.8rem; background:#fff; font-size:1rem; }
+  label.lbl { display:block; font-weight:700; margin-bottom:.3rem; }
+  .pill-active { background:#1B5E20; color:#fff; border-color:#1B5E20; }
+  dialog::backdrop { background: rgba(15,23,42,.65); }
+  dialog { border:none; border-radius:1.5rem; padding:0; max-width:34rem; width:calc(100% - 1.5rem); }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; scroll-behavior:auto !important; } }
+</style>
+</head>
+<body>
+
+<!-- ====== HEADER ====== -->
+<header class="bg-white border-b-4 border-zamrud sticky top-0 z-30 shadow-sm">
+  <div class="max-w-3xl mx-auto px-4 py-3">
+    <div class="flex flex-wrap items-center justify-between gap-2" role="group" aria-label="Pengatur ukuran tulisan">
+      <span class="font-bold">Ukuran Tulisan:</span>
+      <div class="flex gap-2">
+        <button id="btnNormal" class="btn btn-outline" type="button">Normal</button>
+        <button id="btnBig" class="btn btn-primary" type="button">Perbesar Tulisan</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- ====== 1. NAMA MASJID & WAKTU SALAT ====== -->
+  <section class="card text-center" aria-labelledby="judulMasjid">
+    <p class="text-zamrud font-bold">🕌 Portal Jamaah</p>
+    <h1 id="judulMasjid" class="text-3xl font-extrabold text-zamrud">Masjid Al-Ikhlas Digital</h1>
+    <p id="tglMasehi" class="mt-2 font-semibold text-lg"></p>
+    <p id="tglHijriah" class="text-slate-600 font-semibold"></p>
+    <p id="jamDigital" class="mt-3 text-5xl font-extrabold tabular-nums tracking-wide" aria-label="Jam sekarang">--:--:--</p>
+
+    <div class="mt-4 bg-zamrud-soft border-2 border-zamrud rounded-2xl p-4" aria-live="polite">
+      <p class="font-semibold">Menuju waktu salat berikutnya:</p>
+      <p id="namaBerikut" class="text-2xl font-extrabold text-zamrud">-</p>
+      <p id="hitungMundur" class="text-4xl font-extrabold tabular-nums">--:--:--</p>
+    </div>
+
+    <ul id="daftarSalat" class="mt-4 grid grid-cols-1 sm:grid-cols-5 gap-2 text-left"></ul>
+    <p class="mt-3 text-sm text-slate-600">Jadwal contoh untuk wilayah Jakarta. Pengurus dapat menyesuaikannya pada kode (objek <code>JADWAL_SALAT</code>).</p>
+  </section>
+
+  <!-- ====== 2. PETUGAS IBADAH ====== -->
+  <section class="card" aria-labelledby="judulPetugas">
+    <h2 id="judulPetugas" class="text-2xl font-extrabold text-zamrud mb-3">👳 Petugas Ibadah Hari Ini</h2>
+    <dl class="space-y-3">
+      <div class="bg-cream rounded-xl p-3 border border-slate-200">
+        <dt class="font-semibold text-slate-600">Imam Salat Rawatib</dt>
+        <dd id="petImam" class="text-2xl font-extrabold"></dd>
+      </div>
+      <div class="bg-cream rounded-xl p-3 border border-slate-200">
+        <dt class="font-semibold text-slate-600">Muadzin</dt>
+        <dd id="petMuadzin" class="text-2xl font-extrabold"></dd>
+      </div>
+    </dl>
+    <h3 class="mt-5 text-xl font-extrabold text-zamrud">🗓️ Salat Jumat Minggu Ini</h3>
+    <dl class="mt-2 space-y-3">
+      <div class="bg-zamrud-soft rounded-xl p-3 border-2 border-zamrud">
+        <dt class="font-semibold text-slate-700">Khatib</dt>
+        <dd id="petKhatib" class="text-2xl font-extrabold"></dd>
+      </div>
+      <div class="bg-zamrud-soft rounded-xl p-3 border-2 border-zamrud">
+        <dt class="font-semibold text-slate-700">Imam Salat Jumat</dt>
+        <dd id="petImamJumat" class="text-2xl font-extrabold"></dd>
+      </div>
+      <div class="bg-zamrud-soft rounded-xl p-3 border-2 border-zamrud">
+        <dt class="font-semibold text-slate-700">Judul Khotbah</dt>
+        <dd id="petJudul" class="text-xl font-bold"></dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ====== 3. INFAQ, SEDEKAH & ZAKAT ====== -->
+  <section class="card" aria-labelledby="judulDonasi">
+    <h2 id="judulDonasi" class="text-2xl font-extrabold text-zamrud mb-1">💚 Infaq, Sedekah &amp; Zakat</h2>
+    <p class="mb-4">Pilih tujuan, pilih jumlah, lalu tekan tombol hijau di bawah.</p>
+
+    <p class="font-bold mb-2">1. Pilih tujuan:</p>
+    <div id="kategori" class="grid gap-2" role="group" aria-label="Kategori donasi">
+      <button type="button" class="chip px-3 text-left" data-kat="infaq" aria-pressed="true">🕌 Infaq Operasional Masjid</button>
+      <button type="button" class="chip px-3 text-left" data-kat="yatim" aria-pressed="false">🧒 Sedekah Anak Yatim &amp; Dhuafa</button>
+      <button type="button" class="chip px-3 text-left" data-kat="zakat" aria-pressed="false">🌾 Zakat Maal / Profesi</button>
+    </div>
+
+    <p class="font-bold mt-5 mb-2">2. Pilih jumlah:</p>
+    <div id="nominal" class="grid grid-cols-2 gap-3" role="group" aria-label="Nominal cepat">
+      <button type="button" class="chip text-xl" data-nom="10000" aria-pressed="false">Rp 10.000</button>
+      <button type="button" class="chip text-xl" data-nom="25000" aria-pressed="false">Rp 25.000</button>
+      <button type="button" class="chip text-xl" data-nom="50000" aria-pressed="false">Rp 50.000</button>
+      <button type="button" class="chip text-xl" data-nom="100000" aria-pressed="false">Rp 100.000</button>
+    </div>
+    <div class="mt-3">
+      <label for="nomManual" class="lbl">Atau tulis jumlah sendiri (Rp):</label>
+      <input id="nomManual" class="field text-xl" inputmode="numeric" autocomplete="off" placeholder="Contoh: 75.000">
+    </div>
+    <div class="mt-3">
+      <label for="namaDonatur" class="lbl">Nama (boleh dikosongkan):</label>
+      <input id="namaDonatur" class="field" autocomplete="name" placeholder="Hamba Allah">
+    </div>
+
+    <!-- Kalkulator Zakat -->
+    <div class="mt-6 rounded-2xl border-2 border-dashed border-zamrud p-4 bg-zamrud-soft">
+      <h3 class="text-xl font-extrabold text-zamrud">🧮 Hitung Zakat Anda</h3>
+      <label for="zkTotal" class="lbl mt-2">Total penghasilan atau tabungan (Rp):</label>
+      <input id="zkTotal" class="field text-xl" inputmode="numeric" autocomplete="off" placeholder="Contoh: 10.000.000">
+      <div class="mt-3 bg-white rounded-xl p-3 border-2 border-zamrud" aria-live="polite">
+        <p class="font-semibold">Zakat yang perlu ditunaikan (2,5%):</p>
+        <p id="zkHasil" class="text-3xl font-extrabold text-zamrud">Rp 0</p>
+      </div>
+      <button id="btnBayarZakat" type="button" class="btn btn-primary w-full mt-3 text-lg" disabled>Bayar Zakat Ini</button>
+      <p class="mt-3 text-sm text-slate-700">Zakat maal wajib bila harta mencapai nisab dan telah dimiliki satu tahun. Untuk kepastian, silakan tanyakan ke pengurus lewat tombol “Konsultasi Zakat/Agama” di bawah.</p>
+    </div>
+
+    <div class="mt-5 bg-cream rounded-xl p-3 border border-slate-300">
+      <p>Jumlah donasi Anda: <strong id="ringkasan" class="text-xl text-zamrud">belum dipilih</strong></p>
+    </div>
+    <button id="btnLanjut" type="button" class="btn btn-primary w-full mt-3 text-xl min-h-[3.5rem]">Lanjutkan Donasi</button>
+  </section>
+
+  <!-- ====== 4. LAPORAN KAS ====== -->
+  <section class="card" aria-labelledby="judulKas">
+    <h2 id="judulKas" class="text-2xl font-extrabold text-zamrud mb-3">📒 Laporan Kas Masjid (Terbuka)</h2>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div class="bg-zamrud-soft border-2 border-zamrud rounded-xl p-3">
+        <p class="font-semibold">Saldo Kas Operasional</p>
+        <p id="saldoOps" class="text-3xl font-extrabold text-zamrud tabular-nums">Rp 0</p>
+      </div>
+      <div class="bg-zamrud-soft border-2 border-zamrud rounded-xl p-3">
+        <p class="font-semibold">Saldo Dana Sosial / Yatim</p>
+        <p id="saldoSosial" class="text-3xl font-extrabold text-zamrud tabular-nums">Rp 0</p>
+      </div>
+    </div>
+    <h3 class="mt-5 mb-2 text-xl font-extrabold">5 Transaksi Terbaru</h3>
+    <ul id="daftarTx" class="space-y-2"></ul>
+  </section>
+
+  <!-- ====== 5. KAJIAN & LAYANAN ====== -->
+  <section class="card" aria-labelledby="judulKajian">
+    <h2 id="judulKajian" class="text-2xl font-extrabold text-zamrud mb-3">📖 Jadwal Kajian Rutin</h2>
+    <ul id="daftarKajian" class="space-y-3"></ul>
+  </section>
+
+  <section class="card" aria-labelledby="judulLayanan">
+    <h2 id="judulLayanan" class="text-2xl font-extrabold text-zamrud mb-1">📞 Layanan Cepat Pengurus (DKM)</h2>
+    <p class="mb-3">Satu sentuhan, langsung terhubung lewat WhatsApp ke pengurus.</p>
+    <div class="grid gap-3">
+      <a class="btn btn-primary text-lg min-h-[3.5rem]" target="_blank" rel="noopener"
+         href="https://wa.me/6281234567890?text=Assalamu%27alaikum%2C%20saya%20membutuhkan%20layanan%20Ambulans%20Masjid.">🚑 Layanan Ambulans Masjid (Gratis)</a>
+      <a class="btn btn-primary text-lg min-h-[3.5rem]" target="_blank" rel="noopener"
+         href="https://wa.me/6281234567890?text=Assalamu%27alaikum%2C%20saya%20ingin%20menyampaikan%20berita%20duka%20dan%20meminta%20bantuan%20pemulasaraan%20jenazah.">🕊️ Berita Duka / Pemulasaraan Jenazah</a>
+      <a class="btn btn-outline text-lg min-h-[3.5rem]" target="_blank" rel="noopener"
+         href="https://wa.me/6281234567890?text=Assalamu%27alaikum%2C%20saya%20ingin%20berkonsultasi%20tentang%20zakat%20atau%20masalah%20agama.">💬 Konsultasi Zakat / Agama</a>
+    </div>
+    <p class="mt-3 text-sm text-slate-600">Nomor WhatsApp di atas adalah contoh. Ganti dengan nomor pengurus yang sebenarnya.</p>
+  </section>
+</main>
+
+<!-- ====== FOOTER & MODE PENGURUS ====== -->
+<footer class="max-w-3xl mx-auto px-4 pb-10">
+  <p class="text-center text-slate-600 mb-3">© Masjid Al-Ikhlas Digital — Semoga amal ibadah kita diterima Allah SWT.</p>
+
+  <section id="panelAdmin" class="card hidden" aria-labelledby="judulAdmin">
+    <h2 id="judulAdmin" class="text-2xl font-extrabold text-zamrud mb-3">🔧 Panel Pengurus DKM</h2>
+    <form id="formPetugas" class="space-y-3">
+      <h3 class="font-extrabold text-lg">Perbarui Petugas</h3>
+      <div><label class="lbl" for="adImam">Imam Salat Rawatib hari ini</label><input id="adImam" class="field"></div>
+      <div><label class="lbl" for="adMuadzin">Muadzin hari ini</label><input id="adMuadzin" class="field"></div>
+      <div><label class="lbl" for="adKhatib">Khatib Jumat</label><input id="adKhatib" class="field"></div>
+      <div><label class="lbl" for="adImamJumat">Imam Salat Jumat</label><input id="adImamJumat" class="field"></div>
+      <div><label class="lbl" for="adJudul">Judul Khotbah</label><input id="adJudul" class="field"></div>
+      <button type="submit" class="btn btn-primary w-full">Simpan Petugas</button>
+    </form>
+    <hr class="my-5 border-slate-300">
+    <form id="formKeluar" class="space-y-3">
+      <h3 class="font-extrabold text-lg">Catat Pengeluaran Kas</h3>
+      <div><label class="lbl" for="kelKet">Keterangan</label><input id="kelKet" class="field" required placeholder="Contoh: Pembelian karpet"></div>
+      <div><label class="lbl" for="kelNom">Nominal (Rp)</label><input id="kelNom" class="field" inputmode="numeric" required placeholder="500.000"></div>
+      <div><label class="lbl" for="kelDana">Diambil dari</label>
+        <select id="kelDana" class="field"><option value="ops">Kas Operasional</option><option value="sosial">Dana Sosial / Yatim</option></select></div>
+      <button type="submit" class="btn btn-primary w-full">Catat Pengeluaran</button>
+    </form>
+    <button id="btnResetData" type="button" class="btn btn-outline w-full mt-5">Kembalikan Data Contoh</button>
+  </section>
+
+  <div class="text-center mt-4">
+    <button id="btnAdmin" type="button" class="btn btn-outline text-sm min-h-[3rem]" aria-expanded="false" aria-controls="panelAdmin">Masuk Mode Pengurus DKM</button>
+  </div>
+</footer>
+
+<!-- ====== MODAL QRIS ====== -->
+<dialog id="modalQris" aria-labelledby="qrisJudul">
+  <div class="p-5 bg-white rounded-3xl">
+    <h2 id="qrisJudul" class="text-2xl font-extrabold text-zamrud text-center">Selesaikan Donasi</h2>
+    <p class="text-center mt-1">Anda berdonasi untuk <strong id="qrisKategori"></strong></p>
+    <p id="qrisNominal" class="text-center text-4xl font-extrabold my-2"></p>
+
+    <div class="flex justify-center my-3">
+      <div class="bg-white border-4 border-ink rounded-2xl p-3">
+        <div id="qrisSvg" role="img" aria-label="Ilustrasi kode QRIS Masjid Al-Ikhlas (simulasi)"></div>
+        <p class="text-center font-extrabold mt-1 text-sm">QRIS · MASJID AL-IKHLAS</p>
+      </div>
+    </div>
+    <p class="text-center text-sm text-slate-600">Ini hanya simulasi. Tidak ada uang yang benar-benar dipindahkan.</p>
+
+    <div class="mt-3 bg-cream border border-slate-300 rounded-xl p-3 text-center">
+      <p class="font-semibold">Bank Syariah (contoh) a.n. DKM Al-Ikhlas</p>
+      <p class="text-2xl font-extrabold tabular-nums" id="noRek">7123 4567 890</p>
+    </div>
+    <div class="grid gap-3 mt-4">
+      <button id="btnSalin" type="button" class="btn btn-outline text-lg min-h-[3.5rem]">📋 Salin Nomor Rekening</button>
+      <button id="btnKonfirmasi" type="button" class="btn btn-primary text-lg min-h-[3.5rem]">✅ Saya Sudah Berdonasi</button>
+      <button id="btnTutup" type="button" class="btn btn-outline">Batal / Tutup</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Notifikasi -->
+<div id="toast" role="status" aria-live="polite"
+     class="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 hidden max-w-[92%] bg-zamrud text-white text-lg font-bold px-5 py-4 rounded-2xl shadow-xl text-center"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const rp = (n) => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(n));
+  const digits = (s) => parseInt(String(s).replace(/\D/g, ''), 10) || 0;
+  const fmtInput = (el) => { const v = digits(el.value); el.value = v ? new Intl.NumberFormat('id-ID').format(v) : ''; };
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  /* ---------- Penyimpanan (aman bila localStorage tidak tersedia) ---------- */
+  const KEY = 'alikhlas-digital-v1';
+  const store = {
+    get() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } },
+    set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} },
+    clear() { try { localStorage.removeItem(KEY); } catch (e) {} }
+  };
+  const today = new Date();
+  const dayStr = (d) => d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  const defaults = () => ({
+    imam: 'Ustaz Abdullah Rahman', muadzin: 'Bapak Haji Sulaiman',
+    khatib: 'Ustaz Dr. Muhammad Yusuf, Lc.', imamJumat: 'Ustaz Ahmad Fauzi',
+    judul: 'Menjaga Keikhlasan dalam Beramal',
+    saldoOps: 18750000, saldoSosial: 7420000,
+    tx: [
+      { t: 'in',  ket: 'Infaq Kotak Jumat',              nom: 2350000, tgl: dayStr(today) },
+      { t: 'out', ket: 'Pembayaran Listrik & Air Masjid', nom: 1280000, tgl: dayStr(today) },
+      { t: 'in',  ket: 'Sedekah Anak Yatim (Hamba Allah)', nom: 500000, tgl: dayStr(today) },
+      { t: 'out', ket: 'Honor Petugas Kebersihan',        nom: 900000,  tgl: dayStr(today) },
+      { t: 'in',  ket: 'Infaq Pengajian Ahad Pagi',       nom: 760000,  tgl: dayStr(today) }
+    ]
+  });
+  let S = store.get() || defaults();
+
+  /* ---------- Ukuran huruf ---------- */
+  const LEVELS = [18, 22, 27];       // px root font-size
+  let lvl = 0;
+  try { lvl = Math.min(LEVELS.length - 1, Math.max(0, parseInt(localStorage.getItem('alikhlas-fs')) || 0)); } catch (e) {}
+  function applyFont() {
+    document.documentElement.style.setProperty('--root-fs', LEVELS[lvl] + 'px');
+    $('btnBig').disabled = lvl === LEVELS.length - 1;
+    $('btnBig').style.opacity = $('btnBig').disabled ? '.55' : '1';
+    $('btnBig').textContent = $('btnBig').disabled ? 'Sudah Terbesar' : 'Perbesar Tulisan';
+    $('btnNormal').setAttribute('aria-pressed', lvl === 0);
+    try { localStorage.setItem('alikhlas-fs', lvl); } catch (e) {}
+  }
+  $('btnBig').onclick = () => { if (lvl < LEVELS.length - 1) { lvl++; applyFont(); } };
+  $('btnNormal').onclick = () => { lvl = 0; applyFont(); };
+  applyFont();
+
+  /* ---------- Toast ---------- */
+  let toastTimer;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3500);
+  }
+
+  /* ---------- Jam, tanggal, waktu salat ---------- */
+  const JADWAL_SALAT = [
+    { n: 'Subuh', h: 4, m: 2 }, { n: 'Dzuhur', h: 11, m: 46 }, { n: 'Ashar', h: 15, m: 10 },
+    { n: 'Maghrib', h: 17, m: 52 }, { n: 'Isya', h: 19, m: 3 }
+  ];
+  const pad = (n) => String(n).padStart(2, '0');
+  function renderTanggal() {
+    const d = new Date();
+    $('tglMasehi').textContent = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    let h = '';
+    try { h = new Intl.DateTimeFormat('id-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' }).format(d); } catch (e) {}
+    $('tglHijriah').textContent = h ? h.replace(/\s*H?$/, ' H') : '';
+  }
+  function renderSalatList(nextName) {
+    const jumat = new Date().getDay() === 5;
+    $('daftarSalat').innerHTML = JADWAL_SALAT.map(s => {
+      const nama = (jumat && s.n === 'Dzuhur') ? 'Salat Jumat' : s.n;
+      const on = s.n === nextName;
+      return `<li class="rounded-xl border-2 p-2 text-center ${on ? 'pill-active' : 'border-slate-300 bg-cream'}">
+        <p class="font-bold">${nama}</p><p class="text-xl font-extrabold tabular-nums">${pad(s.h)}:${pad(s.m)}</p></li>`;
+    }).join('');
+  }
+  let lastNext = '';
+  function tick() {
+    const now = new Date();
+    $('jamDigital').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    let next = null, target = null;
+    for (const s of JADWAL_SALAT) {
+      const t = new Date(now); t.setHours(s.h, s.m, 0, 0);
+      if (t > now) { next = s; target = t; break; }
+    }
+    if (!next) { next = JADWAL_SALAT[0]; target = new Date(now); target.setDate(target.getDate() + 1); target.setHours(next.h, next.m, 0, 0); }
+    const diff = Math.max(0, Math.floor((target - now) / 1000));
+    $('hitungMundur').textContent = `${pad(Math.floor(diff / 3600))}:${pad(Math.floor(diff % 3600 / 60))}:${pad(diff % 60)}`;
+    const label = (now.getDay() === 5 && next.n === 'Dzuhur') ? 'Salat Jumat' : next.n;
+    $('namaBerikut').textContent = `${label} · pukul ${pad(next.h)}:${pad(next.m)}`;
+    if (lastNext !== next.n) { lastNext = next.n; renderSalatList(next.n); renderTanggal(); }
+  }
+  setInterval(tick, 1000); tick();
+
+  /* ---------- Petugas ---------- */
+  function renderPetugas() {
+    $('petImam').textContent = S.imam; $('petMuadzin').textContent = S.muadzin;
+    $('petKhatib').textContent = S.khatib; $('petImamJumat').textContent = S.imamJumat;
+    $('petJudul').textContent = '“' + S.judul + '”';
+  }
+
+  /* ---------- Kas ---------- */
+  function renderKas() {
+    $('saldoOps').textContent = rp(S.saldoOps);
+    $('saldoSosial').textContent = rp(S.saldoSosial);
+    $('daftarTx').innerHTML = S.tx.slice(0, 5).map(x => `
+      <li class="flex items-center justify-between gap-3 rounded-xl border-2 p-3 ${x.t === 'in' ? 'border-green-700 bg-green-50' : 'border-red-700 bg-red-50'}">
+        <div><p class="font-bold">${esc(x.ket)}</p><p class="text-sm text-slate-600">${esc(x.tgl)} · ${x.t === 'in' ? 'Pemasukan' : 'Pengeluaran'}</p></div>
+        <p class="text-lg font-extrabold tabular-nums whitespace-nowrap ${x.t === 'in' ? 'text-green-800' : 'text-red-800'}">${x.t === 'in' ? '+' : '−'} ${rp(x.nom)}</p>
+      </li>`).join('');
+  }
+  function save() { store.set(S); }
+
+  /* ---------- Kajian ---------- */
+  const KAJIAN = [
+    { hari: 'Senin', waktu: 'Ba’da Maghrib', pemateri: 'Ustaz Abdullah Rahman', tema: 'Belajar Membaca Al-Qur’an (Tahsin)' },
+    { hari: 'Rabu', waktu: 'Ba’da Isya', pemateri: 'Ustaz Ahmad Fauzi', tema: 'Fikih Ibadah Sehari-hari' },
+    { hari: 'Jumat', waktu: 'Ba’da Subuh', pemateri: 'Ustaz Dr. Muhammad Yusuf, Lc.', tema: 'Kisah Para Nabi dan Teladannya' },
+    { hari: 'Ahad', waktu: '07.00 – 08.30', pemateri: 'Ustazah Siti Aminah', tema: 'Pengajian Ibu-ibu: Keluarga Sakinah' }
+  ];
+  $('daftarKajian').innerHTML = KAJIAN.map(k => `
+    <li class="rounded-xl border-2 border-slate-300 bg-cream p-3">
+      <p class="text-xl font-extrabold text-zamrud">${k.hari} · ${k.waktu}</p>
+      <p class="font-bold">${k.tema}</p><p class="text-slate-700">Pemateri: ${k.pemateri}</p>
+    </li>`).join('');
+
+  /* ---------- Donasi ---------- */
+  const KAT = {
+    infaq: { nama: 'Infaq Operasional Masjid', dana: 'ops',    ket: 'Infaq Operasional' },
+    yatim: { nama: 'Sedekah Anak Yatim & Dhuafa', dana: 'sosial', ket: 'Sedekah Anak Yatim & Dhuafa' },
+    zakat: { nama: 'Zakat Maal / Profesi',        dana: 'sosial', ket: 'Zakat Maal/Profesi' }
+  };
+  let kat = 'infaq', jumlah = 0;
+  function renderRingkasan() {
+    $('ringkasan').textContent = jumlah ? `${rp(jumlah)} untuk ${KAT[kat].nama}` : 'belum dipilih';
+  }
+  $('kategori').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-kat]'); if (!b) return;
+    kat = b.dataset.kat;
+    document.querySelectorAll('#kategori button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    renderRingkasan();
+  });
+  function setNominalChips(v) {
+    document.querySelectorAll('#nominal button').forEach(x => x.setAttribute('aria-pressed', String(digits(x.dataset.nom) === v && v > 0)));
+  }
+  $('nominal').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-nom]'); if (!b) return;
+    jumlah = digits(b.dataset.nom); $('nomManual').value = ''; setNominalChips(jumlah); renderRingkasan();
+  });
+  $('nomManual').addEventListener('input', (e) => {
+    fmtInput(e.target); jumlah = digits(e.target.value); setNominalChips(0); renderRingkasan();
+  });
+
+  // Kalkulator zakat
+  let zakatNilai = 0;
+  $('zkTotal').addEventListener('input', (e) => {
+    fmtInput(e.target);
+    zakatNilai = Math.floor(digits(e.target.value) * 0.025);
+    $('zkHasil').textContent = rp(zakatNilai);
+    $('btnBayarZakat').disabled = zakatNilai <= 0;
+  });
+  $('btnBayarZakat').onclick = () => {
+    kat = 'zakat';
+    document.querySelectorAll('#kategori button').forEach(x => x.setAttribute('aria-pressed', x.dataset.kat === 'zakat'));
+    jumlah = zakatNilai; $('nomManual').value = new Intl.NumberFormat('id-ID').format(jumlah);
+    setNominalChips(0); renderRingkasan(); openModal();
+  };
+
+  /* ---------- Modal QRIS ---------- */
+  const modal = $('modalQris');
+  function buildQr() {
+    // Ilustrasi saja: pola acak tetap + tiga kotak penanda sudut
+    const N = 25, c = 8; let seed = 42; const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+    let r = '';
+    const finder = (x, y) => `<rect x="${x*c}" y="${y*c}" width="${7*c}" height="${7*c}" fill="#1E293B"/><rect x="${(x+1)*c}" y="${(y+1)*c}" width="${5*c}" height="${5*c}" fill="#fff"/><rect x="${(x+2)*c}" y="${(y+2)*c}" width="${3*c}" height="${3*c}" fill="#1E293B"/>`;
+    const inF = (i, j) => (i < 8 && j < 8) || (i > N - 9 && j < 8) || (i < 8 && j > N - 9);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (!inF(i, j) && rnd() > 0.52) r += `<rect x="${i*c}" y="${j*c}" width="${c}" height="${c}" fill="#1E293B"/>`;
+    $('qrisSvg').innerHTML = `<svg viewBox="0 0 ${N*c} ${N*c}" width="200" height="200" aria-hidden="true"><rect width="100%" height="100%" fill="#fff"/>${r}${finder(0,0)}${finder(N-7,0)}${finder(0,N-7)}</svg>`;
+  }
+  buildQr();
+  function openModal() {
+    if (!jumlah || jumlah < 1000) { toast('Silakan pilih atau tulis jumlah donasi terlebih dahulu.'); $('nominal').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    $('qrisKategori').textContent = KAT[kat].nama; $('qrisNominal').textContent = rp(jumlah);
+    if (modal.showModal) modal.showModal(); else modal.setAttribute('open', '');
+  }
+  const closeModal = () => (modal.close ? modal.close() : modal.removeAttribute('open'));
+  $('btnLanjut').onclick = openModal;
+  $('btnTutup').onclick = closeModal;
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  $('btnSalin').onclick = async () => {
+    const no = $('noRek').textContent.replace(/\s/g, '');
+    let ok = false;
+    try { await navigator.clipboard.writeText(no); ok = true; } catch (e) {
+      try { const t = document.createElement('textarea'); t.value = no; t.style.position = 'fixed'; t.style.opacity = '0';
+        document.body.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); } catch (e2) {}
+    }
+    toast(ok ? '✅ Nomor rekening berhasil disalin' : 'Gagal menyalin. Silakan catat nomor secara manual.');
+  };
+
+  $('btnKonfirmasi').onclick = () => {
+    const nama = $('namaDonatur').value.trim() || 'Hamba Allah';
+    const k = KAT[kat];
+    if (k.dana === 'ops') S.saldoOps += jumlah; else S.saldoSosial += jumlah;
+    S.tx.unshift({ t: 'in', ket: `${k.ket} (${nama})`, nom: jumlah, tgl: dayStr(new Date()) });
+    S.tx = S.tx.slice(0, 50); save(); renderKas();
+    closeModal();
+    toast(`🤲 Jazakumullah khairan. Donasi ${rp(jumlah)} tercatat di laporan kas.`);
+    jumlah = 0; $('nomManual').value = ''; $('zkTotal').value = ''; zakatNilai = 0; $('zkHasil').textContent = 'Rp 0'; $('btnBayarZakat').disabled = true;
+    setNominalChips(0); renderRingkasan();
+    setTimeout(() => $('judulKas').scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+  };
+
+  /* ---------- Mode Pengurus ---------- */
+  function fillAdmin() {
+    $('adImam').value = S.imam; $('adMuadzin').value = S.muadzin; $('adKhatib').value = S.khatib;
+    $('adImamJumat').value = S.imamJumat; $('adJudul').value = S.judul;
+  }
+  $('btnAdmin').onclick = () => {
+    const open = $('panelAdmin').classList.toggle('hidden') === false;
+    $('btnAdmin').setAttribute('aria-expanded', open);
+    $('btnAdmin').textContent = open ? 'Keluar Mode Pengurus DKM' : 'Masuk Mode Pengurus DKM';
+    if (open) { fillAdmin(); $('panelAdmin').scrollIntoView({ behavior: 'smooth' }); }
+  };
+  $('formPetugas').addEventListener('submit', (e) => {
+    e.preventDefault();
+    S.imam = $('adImam').value.trim() || S.imam; S.muadzin = $('adMuadzin').value.trim() || S.muadzin;
+    S.khatib = $('adKhatib').value.trim() || S.khatib; S.imamJumat = $('adImamJumat').value.trim() || S.imamJumat;
+    S.judul = $('adJudul').value.trim() || S.judul;
+    save(); renderPetugas(); toast('✅ Data petugas diperbarui di halaman utama');
+  });
+  $('kelNom').addEventListener('input', (e) => fmtInput(e.target));
+  $('formKeluar').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const nom = digits($('kelNom').value), ket = $('kelKet').value.trim(), dana = $('kelDana').value;
+    if (!nom || !ket) { toast('Lengkapi keterangan dan nominal.'); return; }
+    const saldo = dana === 'ops' ? S.saldoOps : S.saldoSosial;
+    if (nom > saldo) { toast('Nominal melebihi saldo dana yang dipilih.'); return; }
+    if (dana === 'ops') S.saldoOps -= nom; else S.saldoSosial -= nom;
+    S.tx.unshift({ t: 'out', ket, nom, tgl: dayStr(new Date()) });
+    save(); renderKas(); e.target.reset(); toast('✅ Pengeluaran dicatat dan laporan kas diperbarui');
+  });
+  $('btnResetData').onclick = () => { store.clear(); S = defaults(); renderPetugas(); renderKas(); fillAdmin(); toast('Data contoh dikembalikan'); };
+
+  /* ---------- Mulai ---------- */
+  renderPetugas(); renderKas(); renderRingkasan();
+})();
+</script>
+</body>
+</html>
